@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 namespace ClientGateway.Domain;
 
 public class HeartRate

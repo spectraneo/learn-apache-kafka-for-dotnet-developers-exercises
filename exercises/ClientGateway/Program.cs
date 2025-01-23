@@ -1,5 +1,6 @@
 ﻿using ClientGateway;
 using ClientGateway.Controllers;
+using ClientGateway.Domain;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
@@ -13,18 +14,25 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// TODO: Load a config of type ProducerConfig from the "Kafka" section of the config:
 builder.Services.Configure<ProducerConfig>(builder.Configuration.GetSection("Kafka"));
+builder.Services.Configure<SchemaRegistryConfig>(builder.Configuration.GetSection("SchemaRegistry"));
 
-
-// TODO: Register an IProducer of type <String, String>:
-builder.Services.AddSingleton<IProducer<string, string>>(sp =>
+builder.Services.AddSingleton<ISchemaRegistryClient>(sp =>
 {
-    var config = sp.GetRequiredService<IOptions<ProducerConfig>>().Value;
-    return new ProducerBuilder<string, string>(config).Build();
+    var config = sp.GetRequiredService<IOptions<SchemaRegistryConfig>>();
+
+    return new CachedSchemaRegistryClient(config.Value);
 });
 
+builder.Services.AddSingleton<IProducer<String, Biometrics>>(sp =>
+{
+    var config = sp.GetRequiredService<IOptions<ProducerConfig>>();
+    var schemaRegistry = sp.GetRequiredService<ISchemaRegistryClient>();
 
+    return new ProducerBuilder<String, Biometrics>(config.Value)
+        .SetValueSerializer(new JsonSerializer<Biometrics>(schemaRegistry))
+        .Build();
+});
 
 var app = builder.Build();
 
@@ -33,6 +41,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseHttpsRedirection();
 
 app.UseAuthorization();
 

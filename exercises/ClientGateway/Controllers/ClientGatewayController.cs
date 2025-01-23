@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.Metrics;
+﻿using ClientGateway.Domain;
+using System.Diagnostics.Metrics;
 using System.Net;
 using Confluent.Kafka;
 using Microsoft.AspNetCore.Mvc;
@@ -10,14 +11,15 @@ namespace ClientGateway.Controllers;
 [Route("[controller]")]
 public class ClientGatewayController : ControllerBase
 {
-    private string BiometricsImportedTopicName = "RawBiometricsImported";
-    private readonly IProducer<String, String> _producer;
-    private readonly ILogger<ClientGatewayController> _logger;
+    private const string BiometricsImportedTopicName = "BiometricsImported";
 
-    public ClientGatewayController(IProducer<String, String> producer, ILogger<ClientGatewayController> logger)
+    private readonly ILogger<ClientGatewayController> _logger;
+    private readonly IProducer<String, Biometrics> _producer;
+
+    public ClientGatewayController(IProducer<String, Biometrics> producer, ILogger<ClientGatewayController> logger)
     {
-        _logger = logger;
         _producer = producer;
+        _logger = logger;
         logger.LogInformation("ClientGatewayController is Active.");
     }
 
@@ -30,17 +32,23 @@ public class ClientGatewayController : ControllerBase
     }
 
     [HttpPost("Biometrics")]
-    [ProducesResponseType(typeof(String), (int)HttpStatusCode.OK)]
-    public async Task<AcceptedResult> RecordMeasurements(string metrics)
+    [ProducesResponseType(typeof(Biometrics), (int)HttpStatusCode.Accepted)]
+    public async Task<AcceptedResult> RecordMeasurements(Biometrics metrics)
     {
         _logger.LogInformation("Accepted biometrics");
-        var message = new Message<String, String>
+
+        var message = new Message<String, Biometrics>
         {
+            Key = metrics.DeviceId.ToString(),
             Value = metrics
         };
+
         var result = await _producer.ProduceAsync(BiometricsImportedTopicName, message);
+
         _producer.Flush();
-        return Accepted("", metrics);
+
+        return Accepted(result.Value);
+
     }
 }
 
