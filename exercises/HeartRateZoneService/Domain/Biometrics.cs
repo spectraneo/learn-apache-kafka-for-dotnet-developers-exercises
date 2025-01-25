@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 namespace HeartRateZoneService.Domain;
 
 public class HeartRate
@@ -13,6 +13,7 @@ public class HeartRate
     }
 }
 
+
 public class Biometrics
 {
     public Guid DeviceId { get; }
@@ -26,3 +27,4 @@ public class Biometrics
         MaxHeartRate = maxHeartRate;
     }
 }
+
